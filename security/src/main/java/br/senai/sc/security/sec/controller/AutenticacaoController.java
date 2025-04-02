@@ -1,5 +1,6 @@
 package br.senai.sc.security.sec.controller;
 
+import br.senai.sc.security.model.entity.Usuario;
 import br.senai.sc.security.sec.model.dto.LoginDto;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,7 +26,6 @@ public class AutenticacaoController {
 
     @PostMapping("/login")
     @ResponseStatus(HttpStatus.OK)
-  
     public void  login(@RequestBody LoginDto login,
                          HttpServletRequest request,
                          HttpServletResponse response) {
@@ -37,11 +37,12 @@ public class AutenticacaoController {
 
         if(auth.isAuthenticated()){
             SecurityContext securityContext =
-                    SecurityContextHolder.createEmptyContext();
+                    SecurityContextHolder.getContext();
             securityContext.setAuthentication(auth);
             securityContextRepository.saveContext(securityContext, request, response);
 
             response.setStatus(HttpStatus.OK.value());
+            System.out.println(auth.getPrincipal());
             return;
 //
 //            var usuarioAutenticado =
@@ -50,6 +51,23 @@ public class AutenticacaoController {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
 
     }
+    @GetMapping("/user")
+    private Object getUsuario(){
+        return SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.OK)
+    public void  logout(HttpServletRequest request,
+                        HttpServletResponse response) {
+
+        
+        securityContextRepository.saveContext(
+                SecurityContextHolder.createEmptyContext(), request, response
+        );
+
+
+    }
+
 
 
 

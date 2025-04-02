@@ -7,11 +7,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.SecurityContextConfigurer;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -26,9 +29,12 @@ import org.springframework.stereotype.Component;
 
 
 @Configuration
+@EnableWebSecurity
 public class SecurityConfig {
 
-//    @Bean
+    SecurityContextRepository securityContextRepository;
+
+    //    @Bean
 //    public UserDetailsService users(){
 //        InMemoryUserDetailsManager manager = new InMemoryUserDetailsManager();
 //        manager.createUser(User.builder().username("admin").password("senha").build());
@@ -37,49 +43,58 @@ public class SecurityConfig {
 //        return manager;
 //    }
     @Bean
-    public AuthenticationProvider userDetailsService(
+    public AuthenticationManager autheticationManager(
             UsuarioAutenticacaoService usuarioAutenticacaoService
     ) {
         DaoAuthenticationProvider ap = new DaoAuthenticationProvider();
 
+
         ap.setUserDetailsService(usuarioAutenticacaoService);
         ap.setPasswordEncoder(passwordEncoder());
 
-        return ap;
+        return new ProviderManager(ap);
     }
 
     @Bean
-    public  SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
 
-        return http.
-                csrf(csrf -> csrf.disable())
+        http
+                .formLogin(AbstractHttpConfigurer::disable)
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests.requestMatchers(
-                                HttpMethod.POST, "/api/auth/login", "/api/auth/logout").permitAll()
-
-
-
+                                        HttpMethod.POST, "/api/auth/login", "/api/auth/logout").permitAll()
                                 .anyRequest().authenticated()
 
 
-                )
-                .build();
+                );
+        http.securityContext
+                (config -> {
+                    config.securityContextRepository(securityContextRepository());
+                });
+
+        return http.build();
     }
 
+    @Bean
     public PasswordEncoder passwordEncoder() {
         return NoOpPasswordEncoder.getInstance();
 //        return new BCryptPasswordEncoder(10);
     }
 
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
 
-        return authenticationConfiguration.getAuthenticationManager();
-    }
     @Bean
     public SecurityContextRepository securityContextRepository(
     ) {
-        return new HttpSessionSecurityContextRepository();
+        if(securityContextRepository == null) {
+            securityContextRepository = new HttpSessionSecurityContextRepository();
+        }
+        return securityContextRepository;
     }
+
+//    @Bean
+//    public AuthenticationProvider authenticationProvider(UsuarioAutenticacaoService usuarioAutenticacaoService) {
+//
+//    }
 }
